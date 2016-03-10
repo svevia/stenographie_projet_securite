@@ -1,3 +1,12 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+typedef unsigned short uint16;
+typedef unsigned int uint32;
+
 typedef struct
 {
 	uint16 signature;
@@ -67,6 +76,21 @@ int ecrire_quatre_octets(int fd, uint32 *val){
 	return write(fd,val,4);
 }
 
+int ecrire_texte(int fd, char *val){
+	int byte[7];
+	int j;
+	for(j= 0;&val[j] != 0; j++){
+		printf("%s\n",&val[j]);
+		int i = 0;
+		for(i = 7; i >= 0; --i){
+        	byte[i]= (*byte & 1 << i) ?  1 : 0;
+		}
+    }
+	return write(fd,byte,1);
+}
+
+
+
 int ecrire_entete(int fd, entete_bmp *entete){
 	
 	//entete fichier
@@ -88,6 +112,15 @@ int ecrire_entete(int fd, entete_bmp *entete){
 	ecrire_quatre_octets(fd, &entete->bitmap.taille_palette);
 	ecrire_quatre_octets(fd, &entete->bitmap.nombre_de_couleurs_importantes);
 	return 0;
+}
+
+int calculPadding(entete_bmp *entete){
+	uint32 largeur = entete->bitmap.largeur;
+	int padding = (largeur*3)%4;
+	if(padding != 0){
+		padding = 4 - padding;
+	}
+	return padding;
 }
 
 unsigned char* allouer_pixels(entete_bmp *entete){
@@ -123,20 +156,37 @@ int ecrire_pixels(int vers, entete_bmp *entete, unsigned char *pixels){
 int main(int argc, char *argv[]){
 	int de = open(argv[1],O_RDONLY);
 	if(de == -1){
-		printf("fichier inexistant\n");
-		return 1;
+		fprintf(stderr,"fichier inexistant\n");
+		return 0;
 	}
 
+	if(argc != 4){
+		fprintf(stderr,"mauvais nombre d'arguments\n");
+		return 0;
+	}
+
+	printf("debut\n");
 	entete_bmp entete;
+	unsigned char *pixels;
 	/* lecture du fichier source */
+
 	lire_entete(de, &entete);
+	printf("entete lue\n");
 	pixels = allouer_pixels(&entete);
+	printf("pixels lus\n");
 	lire_pixels(de, &entete, pixels);
 	int vers = open(argv[2],O_CREAT|O_RDWR|O_TRUNC,S_IRWXU);
-	char* text = argv[3]
+	char* text = argv[3];
+	printf("%s\n",text);
+	entete.fichier.offset_donnees = entete.fichier.offset_donnees + strlen(text);
+	
 
 	ecrire_entete(vers, &entete);
+	printf("entete ecrite\n");
+	//ecrire_texte(vers, text);
+	printf("texte ecrit\n");
 	ecrire_pixels(vers, &entete, pixels);
+	printf("pixels ecrits\n");
 
 	return 1; /* on a réussi */
 }
