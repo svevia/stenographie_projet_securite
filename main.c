@@ -76,17 +76,20 @@ int ecrire_quatre_octets(int fd, uint32 *val){
 	return write(fd,val,4);
 }
 
-int ecrire_texte(int fd, char *val){
+void ecrire_texte(int fd, char *texte){
+    int i;
 	int byte[7];
-	int j;
-	for(j= 0;&val[j] != 0; j++){
-		printf("%s\n",&val[j]);
-		int i = 0;
-		for(i = 7; i >= 0; --i){
-        	byte[i]= (*byte & 1 << i) ?  1 : 0;
-		}
-    }
-	return write(fd,byte,1);
+    for(; *texte != 0; ++texte)
+    {
+        printf("%c => ", *texte);
+
+        /* perform bitwise AND for every bit of the character */
+        for(i = 7; i >= 0; --i){
+            byte[i] =(*texte & 1 << i) ? 1 : 0;
+        	write(fd,byte,1);
+			}   
+	}
+
 }
 
 
@@ -154,17 +157,18 @@ int ecrire_pixels(int vers, entete_bmp *entete, unsigned char *pixels){
 }
 
 int main(int argc, char *argv[]){
-	int de = open(argv[1],O_RDONLY);
+
+
+
+	if(argc != 3 || argc != 5){
+		fprintf(stderr,"mauvais nombre d'arguments\n");
+		return 0;
+	}
+	int de = open(argv[2],O_RDONLY);
 	if(de == -1){
 		fprintf(stderr,"fichier inexistant\n");
 		return 0;
 	}
-
-	if(argc != 4){
-		fprintf(stderr,"mauvais nombre d'arguments\n");
-		return 0;
-	}
-
 	printf("debut\n");
 	entete_bmp entete;
 	unsigned char *pixels;
@@ -172,22 +176,33 @@ int main(int argc, char *argv[]){
 
 	lire_entete(de, &entete);
 	printf("entete lue\n");
-	pixels = allouer_pixels(&entete);
-	printf("pixels lus\n");
-	lire_pixels(de, &entete, pixels);
-	int vers = open(argv[2],O_CREAT|O_RDWR|O_TRUNC,S_IRWXU);
-	char* text = argv[3];
-	printf("%s\n",text);
+
+
+
 	entete.fichier.offset_donnees = entete.fichier.offset_donnees + strlen(text);
 	
+	if(argv[1][1] == "e"){//encode
+		pixels = allouer_pixels(&entete);
+		printf("pixels lus\n");
+		lire_pixels(de, &entete, pixels);
+		int vers = open(argv[3],O_CREAT|O_RDWR|O_TRUNC,S_IRWXU);
+		char* text = argv[4];
+		printf("%s\n",text);
+		ecrire_entete(vers, &entete);
+		printf("entete ecrite\n");
+		ecrire_texte(vers, text);
+		printf("texte ecrit\n");
+		ecrire_pixels(vers, &entete, pixels);
+		printf("pixels ecrits\n");
+	}
 
-	ecrire_entete(vers, &entete);
-	printf("entete ecrite\n");
-	//ecrire_texte(vers, text);
-	printf("texte ecrit\n");
-	ecrire_pixels(vers, &entete, pixels);
-	printf("pixels ecrits\n");
+	else if(argv[1][1] == "d"){ // decode
+		
 
+
+
+
+	}
 	return 1; /* on a réussi */
 }
 
