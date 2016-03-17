@@ -46,7 +46,7 @@ int lire_quatre_octets(int fd, uint32 *val){
 }
 
 int lire_entete(int de, entete_bmp *entete){
-	
+
 	//entete fichier
 	lire_deux_octets(de, &entete->fichier.signature);
 	lire_quatre_octets(de, &entete->fichier.taille_fichier);
@@ -77,6 +77,7 @@ int ecrire_quatre_octets(int fd, uint32 *val){
 }
 
 void ecrire_texte(int fd, char *texte){
+	write(fd,(const void*)strlen(texte),4);
     int i;
 	int byte[7];
     for(; *texte != 0; ++texte)
@@ -87,15 +88,25 @@ void ecrire_texte(int fd, char *texte){
         for(i = 7; i >= 0; --i){
             byte[i] =(*texte & 1 << i) ? 1 : 0;
         	write(fd,byte,1);
-			}   
+			}
 	}
+}
 
+void lire_texte(int fd){
+	uint32 *taille = NULL;
+	lire_quatre_octets(fd, taille);
+
+	int byte[100];
+	while(read(fd,byte,100) > 0){
+		printf("%s", (char*)byte);
+	}
+	printf("\n");
 }
 
 
 
 int ecrire_entete(int fd, entete_bmp *entete){
-	
+
 	//entete fichier
 	ecrire_deux_octets(fd, &entete->fichier.signature);
 	ecrire_quatre_octets(fd, &entete->fichier.taille_fichier);
@@ -157,10 +168,8 @@ int ecrire_pixels(int vers, entete_bmp *entete, unsigned char *pixels){
 }
 
 int main(int argc, char *argv[]){
-
-
-
-	if(argc != 3 || argc != 5){
+	printf("%i\n",argc);
+	if(argc != 3 && argc != 5){
 		fprintf(stderr,"mauvais nombre d'arguments\n");
 		return 0;
 	}
@@ -179,9 +188,9 @@ int main(int argc, char *argv[]){
 
 
 
-	entete.fichier.offset_donnees = entete.fichier.offset_donnees + strlen(text);
-	
-	if(argv[1][1] == "e"){//encode
+
+
+	if(argv[1][1] == 'e'){//encode
 		pixels = allouer_pixels(&entete);
 		printf("pixels lus\n");
 		lire_pixels(de, &entete, pixels);
@@ -194,15 +203,11 @@ int main(int argc, char *argv[]){
 		printf("texte ecrit\n");
 		ecrire_pixels(vers, &entete, pixels);
 		printf("pixels ecrits\n");
+		entete.fichier.offset_donnees = entete.fichier.offset_donnees + strlen(text);
 	}
 
-	else if(argv[1][1] == "d"){ // decode
-		
-
-
-
-
+	else if(argv[1][1] == 'd'){ // decode
+		lire_texte(de);
 	}
 	return 1; /* on a réussi */
 }
-
